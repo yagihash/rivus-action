@@ -1,0 +1,13 @@
+# Settings of tagpr (https://github.com/Songmu/tagpr).
+#
+# releaseBranch: the branch the release pull request targets.
+# versionFile:   there is no file that holds the version, so "-".
+# vPrefix:       tags look like v0.0.1 (users pin `yagihash/rivus-action@<sha> # v0.0.1`).
+# changelog:     update CHANGELOG.md in the release pull request (made from the titles of the merged pull requests).
+# release:       create a GitHub Release together with the tag. The action ships no assets, so it is published at once.
+[tagpr]
+	releaseBranch = main
+	versionFile = -
+	vPrefix = true
+	changelog = true
+	release = true
