@@ -11,6 +11,12 @@ on:
 
 permissions: {}
 
+env:
+  # The release of rivus that the tests install. Renovate moves it with the releases of rivus (renovate.json), so the pull request of a new release
+  # tests that release: a change of rivus that breaks the action (the name of an archive, the workflow that signs it, ...) shows up there.
+  # renovate: datasource=github-releases depName=yagihash/rivus
+  RIVUS_VERSION: v0.0.15
+
 # A pull request is checked per branch: a new push to it cancels the run in progress. A push to main keeps every run.
 concurrency:
   group: ci-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
@@ -170,6 +176,7 @@ jobs:
       - name: Run action
         uses: ./
         with:
+          version: ${{ env.RIVUS_VERSION }}
           dart: true
 
       - name: Verify rivus is on PATH
@@ -183,6 +190,13 @@ jobs:
           printf 'name: demo\nenvironment:\n  sdk: ^3.8.0\n' > dart-project/pubspec.yaml
           printf 'import "dart:io";\nvoid main(List<String> a) {\n  Process.run("sh", ["-c", a.first]);\n}\n' > dart-project/lib/main.dart
           rivus sites -lang dart -C dart-project | grep 'dart:io#Process.run'
+
+      # The default, `latest`, is resolved at run time. It is the version above, or a newer one that Renovate has not moved to yet.
+      - name: Install the latest release
+        uses: ./
+
+      - name: Verify the latest release
+        run: rivus version
 
   # The Rust extractor needs the pinned nightly (about 1.1 GB) and a build of the extractor, so this job is slow and runs only when the
   # action or this workflow changed (a pull request), and on every push to main. Nothing is cached.
@@ -209,6 +223,7 @@ jobs:
       - name: Run action
         uses: ./
         with:
+          version: ${{ env.RIVUS_VERSION }}
           rust: true
 
       - name: Verify the Rust extractor runs

@@ -42,6 +42,13 @@
       "pinDigests": true
     },
     {
+      "description": "rivus is our own tool, and its release is what the tests install: update to it at the regular schedule, without the waiting period",
+      "matchDepNames": [
+        "yagihash/rivus"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "Group and automerge GitHub Actions digest/minor/patch updates",
       "groupName": "GitHub Actions",
       "matchManagers": [
@@ -58,13 +65,13 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions installed by a run step, marked with a `# renovate: datasource=... depName=...` comment above `version=vX.Y.Z` (ghalint, actionlint and pinact in ci.yml, pinact in update-readme-pins.yml)",
+      "description": "Versions marked with a `# renovate: datasource=... depName=...` comment above `name=vX.Y.Z` (a run step) or `NAME: vX.Y.Z` (an env): ghalint, actionlint and pinact in ci.yml, pinact in update-readme-pins.yml, and the release of rivus that the tests install (RIVUS_VERSION in ci.yml)",
       "managerFilePatterns": [
         "/^\\.github\\/workflows\\/ci\\.yml$/",
         "/^\\.github\\/workflows\\/update-readme-pins\\.yml$/"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*\\w+=(?<currentValue>\\S+)"
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*\\w+[=:]\\s*(?<currentValue>\\S+)"
       ],
       "versioningTemplate": "semver"
     }
