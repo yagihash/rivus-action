@@ -19,7 +19,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: yagihash/rivus-action@v0.0.1
+      - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
           version: v0.0.15 # omit to install the latest release
 
@@ -31,7 +31,7 @@ To analyze Dart, set up the Dart SDK first and enable `dart`:
 ```yaml
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
 
-      - uses: yagihash/rivus-action@v0.0.1
+      - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
           version: v0.0.15
           dart: true
@@ -42,7 +42,7 @@ To analyze Dart, set up the Dart SDK first and enable `dart`:
 To analyze Rust, enable `rust` (rustup is needed; GitHub-hosted runners have it):
 
 ```yaml
-      - uses: yagihash/rivus-action@v0.0.1
+      - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
           version: v0.0.15
           rust: true
