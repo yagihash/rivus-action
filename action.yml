@@ -10,6 +10,10 @@ inputs:
     description: Also build the Dart extractor (rivus-dart). Requires the Dart SDK on PATH
     required: false
     default: "false"
+  rust:
+    description: Also set up the Rust extractor (rivus-rust) with the nightly toolchain that rivus pins (about 1.1 GB). Requires rustup
+    required: false
+    default: "false"
   token:
     description: Token for gh attestation verify
     required: false
@@ -23,5 +27,6 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
         WITH_DART: ${{ inputs.dart }}
+        WITH_RUST: ${{ inputs.rust }}
         GH_TOKEN: ${{ inputs.token }}
       run: ${{ github.action_path }}/setup.sh
