@@ -26,14 +26,6 @@ jobs:
           scope: ${{ github.repository }}
           policy: writer
 
-      - name: Setup git
-        env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
-        run: |
-          gh auth setup-git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Install pinact
         run: |
           # renovate: datasource=github-releases depName=suzuki-shunsuke/pinact
@@ -48,10 +40,25 @@ jobs:
 
       # Pin the usage examples of README.md to the commit of the latest release (and the other actions in it to their latest).
       - name: Run pinact
-        run: |
-          ./pinact run README.md -u
-          git add README.md
-          git commit -m "chore: update README.md to refer latest version [skip ci]" || echo "No changes to commit"
-          git push origin main
+        run: ./pinact run README.md -u
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Created through the API with the token of the GitHub App, so that GitHub signs it (Verified). A commit made with git here would be unsigned.
+      - name: Create a signed commit on main
+        if: steps.diff.outputs.changed == 'true'
+        uses: yagihash/actions/signed-commit@75a36e929a30f99149784465dcdf9d33ab01a120 # v0.0.4
+        with:
+          token: ${{ steps.token.outputs.token }}
+          branch: main
+          message: "chore: update README.md to refer latest version [skip ci]"
+          files: README.md
