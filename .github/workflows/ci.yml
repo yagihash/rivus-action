@@ -17,7 +17,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Which of the heavy jobs have to run. A pull request is judged by the files it changes; a push to main and a run by hand run everything.
+  # Which of the jobs that run the action have to run (`test`, `test-rust`). A pull request is judged by the files that it changes: the action itself
+  # (action.yml, setup.sh) and this workflow. A push to main and a run by hand run everything.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -25,7 +26,7 @@ jobs:
       contents: read
       pull-requests: read # dorny/paths-filter asks the API for the files of a pull request
     outputs:
-      rust: ${{ steps.filter.outputs.rust }}
+      action: ${{ steps.filter.outputs.action }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -40,7 +41,7 @@ jobs:
         with:
           token: ${{ github.token }}
           filters: |
-            rust:
+            action:
               - 'action.yml'
               - 'setup.sh'
               - '.github/workflows/ci.yml'
@@ -131,6 +132,8 @@ jobs:
             -ignore 'step must run script with "run" section or run action with "uses" section'
 
   test:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.action == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -185,7 +188,7 @@ jobs:
   # action or this workflow changed (a pull request), and on every push to main. Nothing is cached.
   test-rust:
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.rust == 'true'
+    if: github.event_name != 'pull_request' || needs.changes.outputs.action == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -249,7 +252,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   # The one check that a ruleset requires. Every job above is in `needs`: it fails when one of them failed or was cancelled, and passes when they
-  # passed or were skipped (`test-rust` is skipped when nothing it reads changed). `changes` has to have succeeded: a skip is only a pass when it
+  # passed or were skipped (`test` and `test-rust` are skipped when nothing they read changed). `changes` has to have succeeded: a skip is only a pass when it
   # was decided on an answer.
   ci-ok:
     if: always()
