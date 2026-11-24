@@ -30,30 +30,35 @@ jobs:
           - ubuntu-latest
           - ubuntu-26.04-arm
           - macos-latest
-        version:
-          - v0.0.14
-          - latest
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     permissions:
       contents: read
+      attestations: read # gh attestation verify
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # macOS runners do not ship Go. rivus pins its own Go version in go.mod and the go command fetches it.
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
-        with:
-          go-version: stable
-
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
+
+      # v0.0.14 and earlier have no binaries. The action must fail on them, not fall back to anything.
+      - name: Install a release without binaries
+        id: no-binaries
+        uses: ./
+        continue-on-error: true
+        with:
+          version: v0.0.14
+
+      - name: Verify that it failed
+        env:
+          OUTCOME: ${{ steps.no-binaries.outcome }}
+        run: test "$OUTCOME" = failure
 
       - name: Run action
         uses: ./
         with:
-          version: ${{ matrix.version }}
           dart: true
 
       - name: Verify rivus is on PATH
