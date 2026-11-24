@@ -58,10 +58,11 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions installed by a run step, marked with a `# renovate: datasource=... depName=...` comment above `version=vX.Y.Z` (ghalint and actionlint in ghalint.yml, pinact in pinact.yml)",
+      "description": "Tool versions installed by a run step, marked with a `# renovate: datasource=... depName=...` comment above `version=vX.Y.Z` (ghalint and actionlint in ghalint.yml, pinact in ci.yml and update-readme-pins.yml)",
       "managerFilePatterns": [
         "/^\\.github\\/workflows\\/ghalint\\.yml$/",
-        "/^\\.github\\/workflows\\/pinact\\.yml$/"
+        "/^\\.github\\/workflows\\/ci\\.yml$/",
+        "/^\\.github\\/workflows\\/update-readme-pins\\.yml$/"
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*\\w+=(?<currentValue>\\S+)"

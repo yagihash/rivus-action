@@ -1,0 +1,25 @@
+package ghmint
+
+issuer := "https://token.actions.githubusercontent.com"
+
+# Used by update-readme-pins.yml to push the pinned README to main.
+permissions := {"contents": "write"}
+
+default allow := false
+
+# GitHub Actions appends immutable owner/repo IDs to the OIDC subject claim for repositories created after
+# 2026-07-15 (repo:owner@<id>/repo@<id>:ref:...). Pin the actual IDs (yagihash = 1553908, rivus-action = 1470391000)
+# rather than accepting any number, otherwise a recycled name could satisfy the rule.
+# https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/
+
+# workflow_dispatch on main
+allow if {
+	input.sub == "repo:yagihash@1553908/rivus-action@1470391000:ref:refs/heads/main"
+	input.job_workflow_ref == "yagihash/rivus-action/.github/workflows/update-readme-pins.yml@refs/heads/main"
+}
+
+# the release event runs on the tag of the release
+allow if {
+	startswith(input.sub, "repo:yagihash@1553908/rivus-action@1470391000:ref:refs/tags/v")
+	startswith(input.job_workflow_ref, "yagihash/rivus-action/.github/workflows/update-readme-pins.yml@refs/tags/v")
+}

@@ -1,0 +1,129 @@
+name: CI
+
+# One workflow, and one check that a ruleset can require: `ci-ok` (the last job). It fails when any job above it failed or was cancelled.
+# Jobs can be added or renamed without touching the ruleset; a job added here has to be added to the `needs` of `ci-ok`.
+# (ghalint and actionlint stay in ghalint.yml, which is shared by the repositories, and are required on their own.)
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+# A pull request is checked per branch: a new push to it cancels the run in progress. A push to main keeps every run.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run shellcheck
+        run: shellcheck setup.sh
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-26.04-arm
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      attestations: read # gh attestation verify
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
+
+      # v0.0.14 and earlier have no binaries. The action must fail on them, not fall back to anything.
+      - name: Install a release without binaries
+        id: no-binaries
+        uses: ./
+        continue-on-error: true
+        with:
+          version: v0.0.14
+
+      - name: Verify that it failed
+        env:
+          OUTCOME: ${{ steps.no-binaries.outcome }}
+        run: test "$OUTCOME" = failure
+
+      - name: Run action
+        uses: ./
+        with:
+          dart: true
+
+      - name: Verify rivus is on PATH
+        run: |
+          rivus version
+          command -v rivus-dart
+
+      - name: Verify the Dart extractor runs
+        run: |
+          mkdir -p dart-project/lib
+          printf 'name: demo\nenvironment:\n  sdk: ^3.8.0\n' > dart-project/pubspec.yaml
+          printf 'import "dart:io";\nvoid main(List<String> a) {\n  Process.run("sh", ["-c", a.first]);\n}\n' > dart-project/lib/main.dart
+          rivus sites -lang dart -C dart-project | grep 'dart:io#Process.run'
+
+  # Every `uses:` of the workflows and action.yml is pinned to a full commit SHA with a version comment.
+  pinact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      attestations: read # gh attestation verify
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinact
+        run: |
+          # renovate: datasource=github-releases depName=suzuki-shunsuke/pinact
+          version=v5.0.2
+          gh release download -R suzuki-shunsuke/pinact "${version}" -p pinact_linux_amd64.tar.gz
+          gh attestation verify pinact_linux_amd64.tar.gz \
+            -R suzuki-shunsuke/pinact \
+            --signer-workflow suzuki-shunsuke/go-release-workflow/.github/workflows/release.yaml
+          tar xzf pinact_linux_amd64.tar.gz pinact
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run pinact
+        run: ./pinact run --check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  # The one check that a ruleset requires. Every job above is in `needs`: it passes only when all of them passed.
+  ci-ok:
+    if: always()
+    needs: [shellcheck, test, pinact]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check the result of every job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null

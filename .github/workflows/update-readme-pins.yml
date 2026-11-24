@@ -1,0 +1,57 @@
+name: "Update pinned README examples"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  update-readme-pins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # ghmint
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: main
+
+      - name: Create GitHub App Token
+        id: token
+        uses: yagihash/ghmint-action@be57533eef7f69550d06f0c93eede5589158281a # v1.0.0
+        with:
+          scope: ${{ github.repository }}
+          policy: writer
+
+      - name: Setup git
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install pinact
+        run: |
+          # renovate: datasource=github-releases depName=suzuki-shunsuke/pinact
+          version=v5.0.2
+          gh release download -R suzuki-shunsuke/pinact "${version}" -p pinact_linux_amd64.tar.gz
+          gh attestation verify pinact_linux_amd64.tar.gz \
+            -R suzuki-shunsuke/pinact \
+            --signer-workflow suzuki-shunsuke/go-release-workflow/.github/workflows/release.yaml
+          tar xzf pinact_linux_amd64.tar.gz pinact
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+
+      # Pin the usage examples of README.md to the commit of the latest release (and the other actions in it to their latest).
+      - name: Run pinact
+        run: |
+          ./pinact run README.md -u
+          git add README.md
+          git commit -m "chore: update README.md to refer latest version [skip ci]" || echo "No changes to commit"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ steps.token.outputs.token }}

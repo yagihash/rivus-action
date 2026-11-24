@@ -15,7 +15,7 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -29,7 +29,7 @@ jobs:
 To analyze Dart, set up the Dart SDK first and enable `dart`:
 
 ```yaml
-      - uses: dart-lang/setup-dart@v1
+      - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
 
       - uses: yagihash/rivus-action@v0.0.1
         with:
