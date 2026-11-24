@@ -43,6 +43,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # macOS runners do not ship Go. rivus pins its own Go version in go.mod and the go command fetches it.
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: stable
+
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
 
       - name: Run action

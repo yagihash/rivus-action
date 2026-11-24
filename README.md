@@ -47,7 +47,7 @@ Pin the actions to a commit SHA in your own workflows.
 ## Requirements
 
 - Linux or macOS runner. Windows is not supported.
-- Go on `PATH` (preinstalled on GitHub-hosted runners). `go.mod` of rivus pins the Go version, and Go 1.21 or later fetches that toolchain by itself. Run `actions/setup-go` first if you need to control it.
+- Go 1.21 or later on `PATH`. Linux runners ship Go, but macOS runners do not, so run `actions/setup-go` first there. `go.mod` of rivus pins the Go version, and the go command fetches that toolchain by itself.
 - Dart SDK on `PATH` when `dart: true`. The compiled extractor reads the SDK's `dart:*` sources at run time.
 - Run `dart pub get` in the target project before analyzing Dart.
 
