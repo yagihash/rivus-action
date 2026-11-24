@@ -1,0 +1,82 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":timezone(Asia/Tokyo)",
+    "helpers:pinGitHubActionDigestsToSemver",
+    "mergeConfidence:all-badges"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "reviewers": [
+    "yagihash"
+  ],
+  "schedule": [
+    "after 8pm on friday"
+  ],
+  "prHourlyLimit": 0,
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "prCreation": "not-pending",
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Never automerge major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Pin GitHub Actions to commit SHA for security",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "pinDigests": true
+    },
+    {
+      "description": "Group and automerge GitHub Actions digest/minor/patch updates",
+      "groupName": "GitHub Actions",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "automerge": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tool versions installed by a run step, marked with a `# renovate: datasource=... depName=...` comment above `version=vX.Y.Z` (ghalint and actionlint in ghalint.yml, pinact in pinact.yml)",
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/ghalint\\.yml$/",
+        "/^\\.github\\/workflows\\/pinact\\.yml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*\\w+=(?<currentValue>\\S+)"
+      ],
+      "versioningTemplate": "semver"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "automerge": true,
+    "minimumReleaseAge": null,
+    "schedule": [
+      "at any time"
+    ]
+  }
+}

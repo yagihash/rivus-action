@@ -1,0 +1,6 @@
+self-hosted-runner:
+  # GitHub-hosted runner labels that actionlint does not know yet.
+  # Remove an entry once actionlint ships support for it.
+  # https://github.com/actions/runner-images#available-images
+  labels:
+    - ubuntu-26.04-arm

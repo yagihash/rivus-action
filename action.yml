@@ -1,0 +1,27 @@
+name: Setup rivus
+description: Install a prebuilt rivus from a GitHub Release, verify its attestations, and add it to PATH
+
+inputs:
+  version:
+    description: rivus release tag to install (e.g. v0.0.14), or latest for the newest release
+    required: false
+    default: latest
+  dart:
+    description: Also build the Dart extractor (rivus-dart). Requires the Dart SDK on PATH
+    required: false
+    default: "false"
+  token:
+    description: Token for gh attestation verify
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install rivus
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        WITH_DART: ${{ inputs.dart }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: ${{ github.action_path }}/setup.sh

@@ -1,0 +1,59 @@
+name: tagpr
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: tagpr
+  cancel-in-progress: false
+
+jobs:
+  # Create or update the release pull request. When it is merged, create the tag and the GitHub Release.
+  # CHANGELOG.md is updated by tagpr inside the release pull request (`changelog = true` in .tagpr).
+  #
+  # The token differs by run (tagpr uses the one token it is given; this workflow chooses it):
+  #   - a run that creates or updates the release pull request (an ordinary push): GITHUB_TOKEN of this workflow.
+  #     The CI of a pull request made or updated with GITHUB_TOKEN waits for approval ("Approve workflows to run").
+  #   - a run that creates the tag and the Release (the push right after the release pull request is merged): a ghmint
+  #     token (.github/ghmint/tagpr.rego). Only this app is an exception of the tag ruleset, so GITHUB_TOKEN cannot create the tag.
+  # If GITHUB_TOKEN is used by mistake to create the tag, the ruleset rejects it and this run fails (run it again by hand;
+  # for workflow_dispatch the same decision is made when the head of main is the merge of the release pull request).
+  # Needs the repository setting "Allow GitHub Actions to create and approve pull requests".
+  tagpr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # ghmint (only the run that creates the tag and the Release)
+      contents: write # the branch of the release pull request (the run with GITHUB_TOKEN)
+      pull-requests: write # create and update the release pull request, labels (the run with GITHUB_TOKEN)
+    steps:
+      # Is this commit the merge of a release pull request of tagpr (branch tagpr-from-*, label tagpr)?
+      # The same decision as tagpr's own (it tags when a merged release pull request exists), made beforehand.
+      - id: mode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          n=$(gh api "repos/${REPO}/commits/${SHA}/pulls" --jq '[.[] | select(.merged_at != null and (.head.ref | startswith("tagpr-from-")) and ([.labels[].name] | index("tagpr")))] | length')
+          if [ "$n" -gt 0 ]; then echo "release=true" >> "$GITHUB_OUTPUT"; else echo "release=false" >> "$GITHUB_OUTPUT"; fi
+          echo "release PR merged at this commit: $n"
+      - id: token
+        if: steps.mode.outputs.release == 'true'
+        uses: yagihash/ghmint-action@be57533eef7f69550d06f0c93eede5589158281a # v1.0.0
+        with:
+          scope: yagihash/rivus-action
+          policy: tagpr
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.token.outputs.token || github.token }}
+          persist-credentials: false
+      - id: tagpr
+        uses: Songmu/tagpr@047aec4b6c0ce166f52958b5a97f5a3d927fd65b # v1.22.0
+        env:
+          GITHUB_TOKEN: ${{ steps.token.outputs.token || github.token }}
