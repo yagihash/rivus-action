@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Install a prebuilt rivus from a GitHub Release, verify it, and add it to PATH.
 # Expects: VERSION (tag such as v0.0.14, or "latest"), WITH_DART ("true" to build rivus-dart),
-#          GH_TOKEN (for gh attestation verify), RUNNER_TEMP and GITHUB_PATH (set by the runner).
+#          WITH_RUST ("true" to set up the Rust extractor), GH_TOKEN (for gh attestation verify), RUNNER_TEMP and GITHUB_PATH (set by the runner).
 set -euo pipefail
 
 : "${RUNNER_TEMP:?}"
 : "${GITHUB_PATH:?}"
 VERSION="${VERSION:-latest}"
 WITH_DART="${WITH_DART:-false}"
+WITH_RUST="${WITH_RUST:-false}"
 
 REPO="yagihash/rivus"
 # The workflow that builds and attests the release archives.
@@ -56,6 +57,14 @@ case "$WITH_DART" in
   false) ;;
   *) die "Input 'dart' must be 'true' or 'false' (got '${WITH_DART}')." ;;
 esac
+case "$WITH_RUST" in
+  true)
+    command -v rustup > /dev/null ||
+      die "'rustup' was not found on PATH. GitHub-hosted runners have it; install it on other runners, or set 'rust: false'."
+    ;;
+  false) ;;
+  *) die "Input 'rust' must be 'true' or 'false' (got '${WITH_RUST}')." ;;
+esac
 
 root="${RUNNER_TEMP}/rivus-action/${VERSION}"
 dl="${root}/download"
@@ -93,19 +102,47 @@ echo "::endgroup::"
 tar -xzf "${dl}/${asset}" -C "$pkg" --strip-components=1
 install -m 0755 "${pkg}/rivus" "${bin}/rivus"
 
-if [[ "$WITH_DART" == "true" ]]; then
-  # The Dart extractor is not part of the release. Build it from the source of the tag.
-  # rivus-dart reads the dart:* sources of the Dart SDK at run time and finds the SDK from `dart` on PATH.
-  src="${root}/src"
+# The extractors are not part of the release. They are built from the source of the tag.
+src="${root}/src"
+if [[ "$WITH_DART" == "true" || "$WITH_RUST" == "true" ]]; then
   mkdir -p "$src"
-  echo "::group::Build rivus-dart"
+  echo "::group::Download the source of rivus ${VERSION}"
   curl -fsSL --retry 3 "https://github.com/${REPO}/archive/refs/tags/${VERSION}.tar.gz" |
     tar -xz -C "$src" --strip-components=1
+  echo "::endgroup::"
+fi
+
+if [[ "$WITH_DART" == "true" ]]; then
+  # rivus-dart reads the dart:* sources of the Dart SDK at run time and finds the SDK from `dart` on PATH.
+  echo "::group::Build rivus-dart"
   (
     cd "${src}/extractor/dart"
     dart pub get --enforce-lockfile
     dart compile exe bin/rivus_dart.dart -o "${bin}/rivus-dart"
   )
+  echo "::endgroup::"
+fi
+
+if [[ "$WITH_RUST" == "true" ]]; then
+  # The extractor is built with the nightly that the tag pins (extractor/rust/rust-toolchain.toml), about 1.1 GB.
+  # Nothing is cached: that would use up the cache quota of the repository.
+  echo "::group::Set up the Rust extractor"
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    # `rivus setup rust` installs the toolchain with rustup and builds the extractor into the data directory of rivus,
+    # where rivus finds it. It handles the SDK of macOS.
+    PATH="${bin}:${PATH}" rivus setup rust -source "${src}/extractor/rust" -y
+  else
+    # `rivus setup rust` is for macOS (the sandbox). On Linux there is no isolation: the toolchain and the extractor are
+    # prepared here, and a trusted project is read with `rivus analyze -lang rust -unsafe-host-exec`.
+    channel="$(sed -nE 's/^channel[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "${src}/extractor/rust/rust-toolchain.toml")"
+    [[ "$channel" =~ ^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+      die "extractor/rust/rust-toolchain.toml has no 'channel = \"nightly-YYYY-MM-DD\"' (got '${channel}')."
+    rustup toolchain install "$channel" --profile minimal -c rustc-dev -c llvm-tools -c rust-src --no-self-update
+    CARGO_TARGET_DIR="${root}/rust-target" cargo "+${channel}" install --path "${src}/extractor/rust" --locked --root "${root}/rust-ext"
+    install -m 0755 "${root}/rust-ext/bin/rivus-rust" "${bin}/rivus-rust"
+    # rivus looks for the toolchain in ~/.rustup; say where it is, in case RUSTUP_HOME is elsewhere.
+    echo "RIVUS_RUST_TOOLCHAIN_DIR=$(rustup run "$channel" rustc --print sysroot)" >> "${GITHUB_ENV:?}"
+  fi
   echo "::endgroup::"
 fi
 
