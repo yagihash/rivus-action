@@ -15,7 +15,7 @@ env:
   # The release of rivus that the tests install. Renovate moves it with the releases of rivus (renovate.json), so the pull request of a new release
   # tests that release: a change of rivus that breaks the action (the name of an archive, the workflow that signs it, ...) shows up there.
   # renovate: datasource=github-releases depName=yagihash/rivus
-  RIVUS_VERSION: v0.0.15
+  RIVUS_VERSION: v0.0.19
 
 # A pull request is checked per branch: a new push to it cancels the run in progress. A push to main keeps every run.
 concurrency:
