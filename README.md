@@ -21,7 +21,7 @@ jobs:
 
       - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
-          version: v0.0.15 # omit to install the latest release
+          version: v0.0.19 # omit to install the latest release
 
       - run: rivus analyze ./...
 ```
@@ -33,7 +33,7 @@ To analyze Dart, set up the Dart SDK first and enable `dart`:
 
       - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
-          version: v0.0.15
+          version: v0.0.19
           dart: true
 
       - run: rivus analyze -C path/to/dart/project
@@ -44,7 +44,7 @@ To analyze Rust, enable `rust` (rustup is needed; GitHub-hosted runners have it)
 ```yaml
       - uses: yagihash/rivus-action@b851287294be69c07739a8e1af67a9455a3fdde9 # v0.0.1
         with:
-          version: v0.0.15
+          version: v0.0.19
           rust: true
 
       # Linux has no isolation: read only a project that you trust, on the host.
@@ -57,7 +57,7 @@ Pin the actions to a commit SHA in your own workflows.
 
 | Name      | Required | Default               | Description                                                                          |
 |-----------|----------|-----------------------|--------------------------------------------------------------------------------------|
-| `version` | No       | `latest`              | rivus release tag to install (e.g. `v0.0.15`). `latest` installs the newest release  |
+| `version` | No       | `latest`              | rivus release tag to install (e.g. `v0.0.19`). `latest` installs the newest release  |
 | `dart`    | No       | `false`               | Also build the Dart extractor (`rivus-dart`). Requires the Dart SDK on `PATH`        |
 | `rust`    | No       | `false`               | Also set up the Rust extractor (`rivus-rust`) with the nightly toolchain that rivus pins (about 1.1 GB). Requires `rustup` |
 | `token`   | No       | `${{ github.token }}` | Token for `gh attestation verify`                                                    |
@@ -66,9 +66,9 @@ Pin the actions to a commit SHA in your own workflows.
 
 - Linux (x86-64, arm64) or macOS (arm64) runner. Windows and Intel macOS are not supported.
 - `gh` on `PATH` (preinstalled on GitHub-hosted runners), to verify the attestations.
-- A release that ships binaries. Releases before the one that first shipped them have no assets, and the action fails on them.
+- rivus v0.0.19 or later. Earlier releases have no source tarball and no `rivus version -expected-hash`, and the action stops with an error on them.
 - Go on `PATH` to analyze Go code: rivus runs `go list` at run time. Run `actions/setup-go` first (macOS runners do not ship Go). Installing rivus itself needs no Go.
-- Dart SDK on `PATH` when `dart: true`. The extractor is built from the source of the tag, and the compiled extractor reads the SDK's `dart:*` sources at run time.
+- Dart SDK on `PATH` when `dart: true`. The extractor is built from the source tarball of the release, and the compiled extractor reads the SDK's `dart:*` sources at run time.
 - Run `dart pub get` in the target project before analyzing Dart.
 - `rustup` and a C compiler when `rust: true` (preinstalled on GitHub-hosted runners). The extractor is built with the nightly that rivus pins, which is downloaded on every run (about 1.1 GB) and not cached, so that it does not use up the cache quota; expect minutes, not seconds.
 
@@ -82,7 +82,7 @@ Reading a Rust project **builds it** (`cargo check`): the `build.rs` of the proj
 
 ## Security
 
-The action verifies the archive before it is used. Any failure stops the step.
+The action verifies the archive (and the source tarball, when an extractor is built) before it is used. Any failure stops the step.
 
 1. **Checksum**: the SHA-256 of the archive matches `rivus_<version>_checksums.txt` of the release.
 2. **Build provenance**: `gh attestation verify` checks that the archive was built by `yagihash/rivus/.github/workflows/tagpr.yml` on a GitHub-hosted runner.
@@ -92,4 +92,4 @@ Other points:
 
 - `version` is validated against a release-tag pattern before it is used in a URL or a file name.
 - `latest` is resolved at run time, so the same workflow can install different versions over time. Pin `version` when you need reproducible runs.
-- With `dart: true`, the Dart extractor is built from the source of the tag, which is not verified against a checksum.
+- With `dart: true` or `rust: true`, the extractor is built from `rivus_<version>_source.tar.gz` of the release, which is verified in the same three steps as the archive. The build gets the source hash that the release binary prints (`rivus version -expected-hash`), so rivus can tell that the extractor it finds is the one built from this source.

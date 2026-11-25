@@ -15,7 +15,7 @@ env:
   # The release of rivus that the tests install. Renovate moves it with the releases of rivus (renovate.json), so the pull request of a new release
   # tests that release: a change of rivus that breaks the action (the name of an archive, the workflow that signs it, ...) shows up there.
   # renovate: datasource=github-releases depName=yagihash/rivus
-  RIVUS_VERSION: v0.0.15
+  RIVUS_VERSION: v0.0.19
 
 # A pull request is checked per branch: a new push to it cancels the run in progress. A push to main keeps every run.
 concurrency:
@@ -160,17 +160,17 @@ jobs:
 
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
 
-      # v0.0.14 and earlier have no binaries. The action must fail on them, not fall back to anything.
-      - name: Install a release without binaries
-        id: no-binaries
+      # v0.0.18 and earlier are not supported (no source tarball, no -expected-hash). The action must fail on them, not fall back to anything.
+      - name: Install an unsupported older release
+        id: unsupported-version
         uses: ./
         continue-on-error: true
         with:
-          version: v0.0.14
+          version: v0.0.18
 
       - name: Verify that it failed
         env:
-          OUTCOME: ${{ steps.no-binaries.outcome }}
+          OUTCOME: ${{ steps.unsupported-version.outcome }}
         run: test "$OUTCOME" = failure
 
       - name: Run action
