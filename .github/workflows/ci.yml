@@ -160,17 +160,17 @@ jobs:
 
       - uses: dart-lang/setup-dart@2286a0c042b44434fe26d292bbce8d34f7ec662b # v1.8.2
 
-      # v0.0.14 and earlier have no binaries. The action must fail on them, not fall back to anything.
-      - name: Install a release without binaries
-        id: no-binaries
+      # v0.0.18 and earlier are not supported (no source tarball, no -expected-hash). The action must fail on them, not fall back to anything.
+      - name: Install an unsupported older release
+        id: unsupported-version
         uses: ./
         continue-on-error: true
         with:
-          version: v0.0.14
+          version: v0.0.18
 
       - name: Verify that it failed
         env:
-          OUTCOME: ${{ steps.no-binaries.outcome }}
+          OUTCOME: ${{ steps.unsupported-version.outcome }}
         run: test "$OUTCOME" = failure
 
       - name: Run action
