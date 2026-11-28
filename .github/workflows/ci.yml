@@ -66,8 +66,8 @@ jobs:
       - name: Run shellcheck
         run: shellcheck setup.sh
 
-  # Security checks of the workflows and action.yml (ghalint) and a lint of the workflows (actionlint).
-  ghalint:
+  # Security checks and a lint of the workflows and action.yml (ghalint and jactionlint, in yagihash/actions/check-actions-security).
+  check-actions-security:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -81,61 +81,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install ghalint
-        run: |
-          # renovate: datasource=github-releases depName=suzuki-shunsuke/ghalint
-          version=v1.5.6
-          gh release download -R suzuki-shunsuke/ghalint "${version}" -p "ghalint_${version#v}_linux_amd64.tar.gz"
-          gh attestation verify "ghalint_${version#v}_linux_amd64.tar.gz" \
-            -R suzuki-shunsuke/ghalint \
-            --signer-workflow suzuki-shunsuke/go-release-workflow/.github/workflows/release.yaml
-          tar xzf "ghalint_${version#v}_linux_amd64.tar.gz" ghalint
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      # Run the two independent ghalint checks concurrently using the new
-      # parallel steps feature (background steps + wait-all).
-      # https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/
-      - name: Run ghalint run
-        run: ./ghalint run
-        background: true
-
-      - name: Run ghalint act
-        run: ./ghalint act
-        background: true
-
-      - wait-all:
-
-  actionlint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      attestations: read # gh attestation verify
-
-    steps:
-      - uses: cicd-sensor/cicd-sensor-action@6511eb44c91d71b2b93d71193b1bf2cb18352f66 # v0.0.38
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install actionlint
-        run: |
-          # renovate: datasource=github-releases depName=rhysd/actionlint
-          version=v1.7.12
-          gh release download -R rhysd/actionlint "${version}" -p "actionlint_${version#v}_linux_amd64.tar.gz"
-          gh attestation verify "actionlint_${version#v}_linux_amd64.tar.gz" --repo rhysd/actionlint
-          tar xzf "actionlint_${version#v}_linux_amd64.tar.gz" actionlint
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      # actionlint does not know the parallel steps (background / wait-all) yet. The label of the arm64 runner is in .github/actionlint.yaml.
-      - name: Run actionlint
-        run: |
-          ./actionlint \
-            -ignore 'unexpected key "background"' \
-            -ignore 'step must run script with "run" section or run action with "uses" section'
+      - uses: yagihash/actions/check-actions-security@9f208d1c7c8bdccc9fb897307a18b15375ee5000 # v0.2.0
 
   test:
     needs: changes
@@ -271,7 +217,7 @@ jobs:
   # was decided on an answer.
   ci-ok:
     if: always()
-    needs: [changes, shellcheck, ghalint, actionlint, test, test-rust, pinact]
+    needs: [changes, shellcheck, check-actions-security, test, test-rust, pinact]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}

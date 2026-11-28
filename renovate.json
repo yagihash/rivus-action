@@ -6,7 +6,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Versions marked with a `# renovate: datasource=... depName=...` comment above `name=vX.Y.Z` (a run step) or `NAME: vX.Y.Z` (an env): ghalint, actionlint and pinact in ci.yml, pinact in update-readme-pins.yml, and the release of rivus that the tests install (RIVUS_VERSION in ci.yml)",
+      "description": "Versions marked with a `# renovate: datasource=... depName=...` comment above `name=vX.Y.Z` (a run step) or `NAME: vX.Y.Z` (an env): pinact in ci.yml, pinact in update-readme-pins.yml, and the release of rivus that the tests install (RIVUS_VERSION in ci.yml)",
       "managerFilePatterns": [
         "/^\\.github\\/workflows\\/ci\\.yml$/",
         "/^\\.github\\/workflows\\/update-readme-pins\\.yml$/"
