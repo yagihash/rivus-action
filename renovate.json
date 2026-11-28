@@ -3,15 +3,6 @@
   "extends": [
     "github>yagihash/renovate-config"
   ],
-  "packageRules": [
-    {
-      "description": "rivus is our own tool, and its release is what the tests install: update to it at the regular schedule, without the waiting period",
-      "matchDepNames": [
-        "yagihash/rivus"
-      ],
-      "minimumReleaseAge": null
-    }
-  ],
   "customManagers": [
     {
       "customType": "regex",
